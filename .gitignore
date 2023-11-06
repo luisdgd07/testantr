@@ -1,0 +1,9 @@
+.idea
+.vscode
+lexer-chilero/target
+parser-chilero-cup/target
+parser-chilero-antlr/target
+cooltests/*.s
+/input.test
+/lexer
+/parser

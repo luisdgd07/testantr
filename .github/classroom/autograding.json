@@ -1,0 +1,44 @@
+{
+  "tests": [
+    {
+      "name": "Stack test CUP",
+      "setup": "chmod +x setup.sh && ./setup.sh",
+      "run": "make dostackcup",
+      "input": "",
+      "output": "((.)+(\\n)+)+(\\b2\\n\\+\\n1\\n)?((.)+(\\n))+(\\>( )*)(\\bCOOL program successfully executed)",
+      "comparison": "regex",
+      "timeout": 3,
+      "points": 15
+    },
+    {
+      "name": "Factorial test CUP",
+      "setup": "chmod +x setup.sh && ./setup.sh",
+      "run": "make dofactorialcup",
+      "input": "",
+      "output": "((.)+(\\n)+)+(\\b2\\n\\+\\n1\\n)?((.)+(\\n))+(\\b3628800\\n)(\\bCOOL program successfully executed)",
+      "comparison": "regex",
+      "timeout": 3,
+      "points": 15
+    },
+    {
+      "name": "Stack test ANTLR",
+      "setup": "chmod +x setup.sh && ./setup.sh",
+      "run": "make dostackantlr",
+      "input": "",
+      "output": "((.)+(\\n)+)+(\\b2\\n\\+\\n1\\n)?((.)+(\\n))+(\\>( )*)(\\bCOOL program successfully executed)",
+      "comparison": "regex",
+      "timeout": 3,
+      "points": 25
+    },
+    {
+      "name": "Factorial test ANTLR",
+      "setup": "chmod +x setup.sh && ./setup.sh",
+      "run": "make dofactorialantlr",
+      "input": "",
+      "output": "((.)+(\\n)+)+(\\b2\\n\\+\\n1\\n)?((.)+(\\n))+(\\b3628800\\n)(\\bCOOL program successfully executed)",
+      "comparison": "regex",
+      "timeout": 3,
+      "points": 25
+    }
+  ]
+}
