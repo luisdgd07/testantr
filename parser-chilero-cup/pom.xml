@@ -47,6 +47,21 @@
     </pluginManagement>
     <plugins>
       <plugin>
+        <groupId>de.jflex</groupId>
+        <artifactId>jflex-maven-plugin</artifactId>
+        <version>1.8.2</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <jlex>true</jlex>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>com.github.vbmacher</groupId>
         <artifactId>cup-maven-plugin</artifactId>
         <version>11b-20160615-1</version>

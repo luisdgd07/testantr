@@ -23,6 +23,11 @@
       <version>4.6.3</version>
     </dependency>
     <dependency>
+      <groupId>org.antlr</groupId>
+      <artifactId>antlr4</artifactId>
+      <version>4.10.1</version>
+    </dependency>
+    <dependency>
       <groupId>com.github.vbmacher</groupId>
       <artifactId>java-cup-runtime</artifactId>
       <version>11b-20160615-1</version>
@@ -40,28 +45,29 @@
       <plugins>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.0.0-M7</version>
+          <version>3.0.0-M5</version>
         </plugin>
 
       </plugins>
     </pluginManagement>
     <plugins>
       <plugin>
-        <groupId>com.github.vbmacher</groupId>
-        <artifactId>cup-maven-plugin</artifactId>
-        <version>11b-20160615-1</version>
+        <groupId>org.antlr</groupId>
+        <artifactId>antlr4-maven-plugin</artifactId>
+        <version>4.10.1</version>
+        <configuration>
+          <listener>true</listener>
+          <visitor>true</visitor>
+        </configuration>
         <executions>
           <execution>
+            <id>antlr</id>
+            <phase>generate-sources</phase>
             <goals>
-              <goal>generate</goal>
+              <goal>antlr4</goal>
             </goals>
           </execution>
         </executions>
-        <configuration>
-          <outputDirectory>${project.build.directory}/generated-sources/cup</outputDirectory>
-          <className>CoolParser</className>
-          <symbolsName>TokenConstants</symbolsName>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -76,7 +82,7 @@
               <archive>
                 <manifest>
                   <mainClass>
-                    gt.edu.url.compiler.Parser
+                    gt.edu.url.compiler.ParserAntlr4
                   </mainClass>
                 </manifest>
               </archive>
