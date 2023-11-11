@@ -61,16 +61,16 @@ terminal AbstractSymbol TYPEID, OBJECTID;
 nonterminal programc program;
 nonterminal Classes listac;
 nonterminal class_c clase;
-nonterminal Features listacare;
+nonterminal Features listacr;
 nonterminal Features reduccion;
-nonterminal Feature contenido_clase;
+nonterminal Feature contenidoc;
 nonterminal Formals parametro;
-nonterminal formalc contenidopar;
+nonterminal formalc contenidodu;
 nonterminal Expression expresion;
-nonterminal let contenido_let;
-nonterminal Expressions repitencia_expresion,expresion_bloque;
-nonterminal Expressions reduce_expresion;
-nonterminal Cases contenido_case;
+nonterminal let contenidol;
+nonterminal Expressions repit,cubo;
+nonterminal Expressions reduc;
+nonterminal Cases contenidocs;
 precedence right ASSIGN;
 precedence left NOT;
 precedence nonassoc LE, LT, EQ;
@@ -105,17 +105,17 @@ clase
 	;
 
 reduccion::=LBRACE RBRACE                 {: RESULT = new Features(curr_lineno()); :}
-    | LBRACE listacare:df RBRACE       {: RESULT = df; :}
+    | LBRACE listacr:df RBRACE       {: RESULT = df; :}
 ;
 
 
-listacare
-	::= contenido_clase:p                         {: RESULT = (new Features(curr_lineno())).appendElement(p); :}
-	| listacare:f contenido_clase:p    {: RESULT = f.appendElement(p); :}
+listacr
+	::= contenidoc:p                         {: RESULT = (new Features(curr_lineno())).appendElement(p); :}
+	| listacr:f contenidoc:p    {: RESULT = f.appendElement(p); :}
 	;
 
 
-contenido_clase
+contenidoc
 
 	::= OBJECTID:o COLON TYPEID:t SEMI                          {: RESULT = new attr(curr_lineno(), o, t, new no_expr(curr_lineno())); :}
 	| OBJECTID:o COLON TYPEID:t ASSIGN expresion:ex SEMI        {: RESULT = new attr(curr_lineno(), o, t, ex); :}
@@ -127,32 +127,32 @@ contenido_clase
 
 parametro
 	::=                                         {: RESULT = new Formals(curr_lineno()); :}
-    | contenidopar:cp                                        {: RESULT = (new Formals(curr_lineno())).appendElement(cp); :}
-	| parametro:p COMMA contenidopar:cp                      {: RESULT = p.appendElement(cp); :}
+    | contenidodu:cp                                        {: RESULT = (new Formals(curr_lineno())).appendElement(cp); :}
+	| parametro:p COMMA contenidodu:cp                      {: RESULT = p.appendElement(cp); :}
 	;
 
 
-contenidopar
+contenidodu
 	::= OBJECTID:o COLON TYPEID:t                                   {: RESULT = new formalc(curr_lineno(), o, t); :}
 	;
 
 expresion
 	::= OBJECTID:o ASSIGN expresion:ex                                                  {: RESULT = new assign(curr_lineno(), o, ex); :}
 
-    | expresion:ex AT TYPEID:t DOT OBJECTID:o reduce_expresion:re                        {: RESULT = new static_dispatch(curr_lineno(), ex, t, o, re); :}
-    | expresion:ex DOT OBJECTID:o reduce_expresion:re                                    {: RESULT = new dispatch(curr_lineno(), ex, o, re); :}
+    | expresion:ex AT TYPEID:t DOT OBJECTID:o reduc:re                        {: RESULT = new static_dispatch(curr_lineno(), ex, t, o, re); :}
+    | expresion:ex DOT OBJECTID:o reduc:re                                    {: RESULT = new dispatch(curr_lineno(), ex, o, re); :}
 	
-	| OBJECTID:o reduce_expresion:re                                                     {: AbstractSymbol aS=AbstractTable.idtable.addString("self");
+	| OBJECTID:o reduc:re                                                     {: AbstractSymbol aS=AbstractTable.idtable.addString("self");
 	                                                                                    RESULT = new dispatch(curr_lineno(),new object(curr_lineno(),aS),o,re); :}
 	
 	| IF expresion:ex THEN expresion:ex1 ELSE expresion:ex2 FI                          {: RESULT = new cond(curr_lineno(), ex, ex1, ex2); :}
 	| WHILE expresion:ex LOOP expresion:ex1 POOL                                        {: RESULT = new loop(curr_lineno(), ex, ex1); :}
 	
-	| LBRACE expresion_bloque:eb RBRACE                                                 {: RESULT = new block(curr_lineno(), eb); :}
+	| LBRACE cubo:eb RBRACE                                                 {: RESULT = new block(curr_lineno(), eb); :}
 	
-	| LET contenido_let:cl                                                              {: RESULT = cl; :}
+	| LET contenidol:cl                                                              {: RESULT = cl; :}
 	
-	| CASE expresion:ex OF contenido_case:cc ESAC                                       {: RESULT = new typcase(curr_lineno(),ex,cc); :}
+	| CASE expresion:ex OF contenidocs:cc ESAC                                       {: RESULT = new typcase(curr_lineno(),ex,cc); :}
 
 	| NEW TYPEID:t                                                                      {: RESULT = new new_(curr_lineno(), t); :}
 	| ISVOID expresion:ex                                                               {: RESULT = new isvoid(curr_lineno(), ex); :}
@@ -175,34 +175,34 @@ expresion
     | BOOL_CONST:bc                                                                     {: RESULT = new bool_const(curr_lineno(), bc); :}
 	;
 
-reduce_expresion
+reduc
 
     ::= LPAREN RPAREN                                               {: RESULT = new Expressions(curr_lineno()); :}
-    | LPAREN repitencia_expresion:re RPAREN                         {: RESULT = re; :}
+    | LPAREN repit:re RPAREN                         {: RESULT = re; :}
     ;
 
-repitencia_expresion
+repit
    
     ::= expresion:ex                                {: RESULT = (new Expressions(curr_lineno())).appendElement(ex); :}
-    | repitencia_expresion:rex COMMA expresion:ex   {: RESULT = rex.appendElement(ex); :}
+    | repit:rex COMMA expresion:ex   {: RESULT = rex.appendElement(ex); :}
     ;
 
-contenido_case
+contenidocs
     
     ::= OBJECTID:o COLON TYPEID:t DARROW expresion:ex SEMI                       {: RESULT = (new Cases(curr_lineno())).appendElement(new branch(curr_lineno(), o, t, ex)); :}
     
-    | contenido_case:cc OBJECTID:o COLON TYPEID:t DARROW expresion:ex SEMI       {: RESULT = cc.appendElement(new branch(curr_lineno(), o, t, ex)); :}
+    | contenidocs:cc OBJECTID:o COLON TYPEID:t DARROW expresion:ex SEMI       {: RESULT = cc.appendElement(new branch(curr_lineno(), o, t, ex)); :}
     ;
 
-contenido_let
+contenidol
    
     ::= OBJECTID:o COLON TYPEID:t IN expresion:ex                               {: RESULT = new let(curr_lineno(), o, t,new no_expr(curr_lineno()), ex); :}
     | OBJECTID:o COLON TYPEID:t ASSIGN expresion:ex IN expresion:ex1            {: RESULT = new let(curr_lineno(), o, t, ex, ex1); :}
   
-    | OBJECTID:o COLON TYPEID:t COMMA contenido_let:cl                          {: RESULT = new let(curr_lineno(), o, t, new no_expr(curr_lineno()), cl); :}
-    | OBJECTID:o COLON TYPEID:t ASSIGN expresion:ex COMMA contenido_let:cl      {: RESULT = new let(curr_lineno(), o, t, ex, cl); :}
+    | OBJECTID:o COLON TYPEID:t COMMA contenidol:cl                          {: RESULT = new let(curr_lineno(), o, t, new no_expr(curr_lineno()), cl); :}
+    | OBJECTID:o COLON TYPEID:t ASSIGN expresion:ex COMMA contenidol:cl      {: RESULT = new let(curr_lineno(), o, t, ex, cl); :}
     ;
-expresion_bloque
+cubo
     ::= expresion:ex SEMI                       {: RESULT = (new Expressions(curr_lineno())).appendElement(ex); :}
-    | expresion_bloque:eb expresion:ex SEMI     {: RESULT = eb.appendElement(ex); :}
+    | cubo:eb expresion:ex SEMI     {: RESULT = eb.appendElement(ex); :}
     ;
