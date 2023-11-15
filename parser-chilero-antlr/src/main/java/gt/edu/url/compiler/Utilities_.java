@@ -20,11 +20,10 @@ PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 */
 
 import java_cup.runtime.Symbol;
-import org.antlr.v4.runtime.CommonToken;
 
 import java.io.PrintStream;
 
-class Utilities {
+class Utilities_ {
     // change this to true to enable table checking
     private static final boolean checkTables = false;
 
@@ -82,8 +81,8 @@ class Utilities {
      * @param s the token
      * @return the string representation
      * */
-    public static String tokenToString(CommonToken s) {
-	switch (s.getType()) {
+    public static String tokenToString(Symbol s) {
+	switch (s.sym) {
 	case TokenConstants.CLASS:      return("CLASS");
 	case TokenConstants.ELSE:       return("ELSE");
 	case TokenConstants.FI:         return("FI");
@@ -128,7 +127,7 @@ class Utilities {
 	case TokenConstants.LBRACE:     return("'{'");
 	case TokenConstants.RBRACE:     return("'}'");
 	case TokenConstants.EOF:        return("EOF");
-	default:                        return("<Invalid Token: " + s.getText() + ">");
+	default:                        return("<Invalid Token: " + s.sym + ">");
 	}
     }
 
@@ -136,17 +135,17 @@ class Utilities {
      *
      * @param s the token
      * */
-    public static void printToken(CommonToken s) {
+    public static void printToken(Symbol s) {
 	System.err.print(tokenToString(s));
 
 	String val = null;
 
-	switch (s.getType()) {
+	switch (s.sym) {
 	case TokenConstants.BOOL_CONST:
-	    System.err.print(" = " + s.getText());
+	    System.err.print(" = " + s.value);
 	    break;
 	case TokenConstants.INT_CONST:
-	    val = s.getText();
+	    val = ((AbstractSymbol)s.value).getString();
 	    System.err.print(" = " + val);
 	    if (checkTables) {
 		AbstractTable.inttable.lookup(val);
@@ -154,14 +153,14 @@ class Utilities {
 	    break;
 	case TokenConstants.TYPEID:
 	case TokenConstants.OBJECTID:
-	    val = s.getText();
+	    val = ((AbstractSymbol)s.value).getString();
 	    System.err.print(" = " + val);
 	    if (checkTables) {
 		AbstractTable.idtable.lookup(val);
 	    }
 	    break;
 	case TokenConstants.STR_CONST: 
-	    val = s.getText();
+	    val = ((AbstractSymbol)s.value).getString();
 	    System.err.print(" = \"");
 	    printEscapedString(System.err, val);
 	    System.err.print("\"");
@@ -171,29 +170,30 @@ class Utilities {
 	    break;
 	case TokenConstants.ERROR:
 	    System.err.print(" = \"");
-	    printEscapedString(System.err, s.getText());
+	    printEscapedString(System.err, s.value.toString());
 	    System.err.print("\"");
 	    break;
 	}
 	System.err.println("");
     }
 
+	
     /** Dumps a token to the specified stream
      *
      * @param s the token
      * @param str the stream
      * */
-    public static void dumpToken(PrintStream str, int lineno, CommonToken s) {
+    public static void dumpToken(PrintStream str, int lineno, Symbol s) {
 	str.print("#" + lineno + " " + tokenToString(s));
 
 	String val = null;
 
-	switch (s.getTokenIndex()) {
+	switch (s.sym) {
 	case TokenConstants.BOOL_CONST:
-	    str.print(" " + s.getText());
+	    str.print(" " + s.value);
 	    break;
 	case TokenConstants.INT_CONST:
-	    val = s.getText();
+	    val = ((AbstractSymbol)s.value).getString();
 	    str.print(" " + val);
 	    if (checkTables) {
 		AbstractTable.inttable.lookup(val);
@@ -201,14 +201,14 @@ class Utilities {
 	    break;
 	case TokenConstants.TYPEID:
 	case TokenConstants.OBJECTID:
-	    val = s.getText();
+	    val = ((AbstractSymbol)s.value).getString();
 	    str.print(" " + val);
 	    if (checkTables) {
 		AbstractTable.idtable.lookup(val);
 	    }
 	    break;
 	case TokenConstants.STR_CONST: 
-	    val =s.getText();
+	    val = ((AbstractSymbol)s.value).getString();
 	    str.print(" \"");
 	    printEscapedString(str, val);
 	    str.print("\"");
@@ -218,7 +218,7 @@ class Utilities {
 	    break;
 	case TokenConstants.ERROR:
 	    str.print(" \"");
-	    printEscapedString(str, s.getText());
+	    printEscapedString(str, s.value.toString());
 	    str.print("\"");
 	    break;
 	}

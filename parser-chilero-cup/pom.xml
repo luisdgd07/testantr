@@ -23,6 +23,11 @@
       <version>4.6.3</version>
     </dependency>
     <dependency>
+      <groupId>org.antlr</groupId>
+      <artifactId>antlr4</artifactId>
+      <version>4.10.1</version>
+    </dependency>
+    <dependency>
       <groupId>com.github.vbmacher</groupId>
       <artifactId>java-cup-runtime</artifactId>
       <version>11b-20160615-1</version>

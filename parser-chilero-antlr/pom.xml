@@ -82,7 +82,7 @@
               <archive>
                 <manifest>
                   <mainClass>
-                    gt.edu.url.compiler.ParserAntlr4
+                    gt.edu.url.compiler.App
                   </mainClass>
                 </manifest>
               </archive>
