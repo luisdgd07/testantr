@@ -6,7 +6,7 @@ all parser actions.  All the extra variables/functions you want to use
 in the semantic actions should go here.  Don't remove or modify anything
 that was there initially.  */
 
-action code {:
+action code {: 
 
     int curr_lineno() {
 	return ((CoolTokenLexer)parser.getScanner()).curr_lineno();
@@ -15,7 +15,7 @@ action code {:
     AbstractSymbol curr_filename() {
 	return ((CoolTokenLexer)parser.getScanner()).curr_filename();
     }
-:}
+:} 
 
 /************************************************************************/
 /*                DONT CHANGE ANYTHING IN THIS SECTION                  */
@@ -56,21 +56,33 @@ terminal AbstractSymbol TYPEID, OBJECTID;
 /*  DON'T CHANGE ANYTHING ABOVE THIS LINE, OR YOUR PARSER WONT WORK       */
 /**************************************************************************/
 
- /*Complete the nonterminal list below, giving a type for the semantic value of each non terminal. (See the CUP documentation for details.*/
+/*Complete the nonterminal list below, giving a type for the semantic value of each non terminal. (See the CUP documentation for details.*/
+/*1)Listado de los que reunen el completo de sus pequeños hijos  Classes, Features, Formals, Expressions, Cases
+2)AST constructores que son unicos hijos de sus clases programc, class_c, formalc
+3)AST constructores de uno solo Feature, Expression*/
+nonterminal programc program;//2)1 programa en general
+nonterminal Classes class_list;//1)1 estado creador de clases
+nonterminal class_c clase;//2)2 clase en general para clase
+nonterminal Features dummy_feature_list;//1)2
+nonterminal Features reduccion_dummy;//no terminal agregado por conflictos shift reduce en dummy
+nonterminal Feature contenido_clase;//3)1
+nonterminal Formals parametro;//1)3
+nonterminal formalc contenido_parametro;//2)3
+nonterminal Expression expresion;//3)2
+nonterminal let contenido_let;//hijo de Expression
+nonterminal Expressions repitencia_expresion,expresion_bloque;//1)4
+nonterminal Expressions reduce_expresion;//no terminal agregado por conflictos con reduce en repitencia expresion
+nonterminal Cases contenido_case;//1)5
 
-nonterminal programc program;
-nonterminal Classes listac;
-nonterminal class_c clase;
-nonterminal Features listacr;
-nonterminal Features reduccion;
-nonterminal Feature contenidoc;
-nonterminal Formals parametro;
-nonterminal formalc contenidodu;
-nonterminal Expression expresion;
-nonterminal let contenidol;
-nonterminal Expressions repit,cubo;
-nonterminal Expressions reduc;
-nonterminal Cases contenidocs;
+/* Precedence declarations go here. */
+/*Segun el punto 11.1 en el manual de Cool de esta manera va
+1).   2)@       3)~       4)isvoid     5)* /     6)+ -    7)<= < =      8)not     9)<-
+Segun https://docs.oracle.com/cd/E19504-01/802-5880/6i9k05dh3/index.html
+se usaria left para todos los operadores del 1) al 6), del 7), que serian
+con nonassoc especificando lt en FORTRAN, de ahi tomando esta idea de precedencia, el 8)
+nuevamente con un left, y pues el 9) con right, con esto refutando lo que indica en el manual
+mismente al final del 11.1
+*/
 precedence right ASSIGN;
 precedence left NOT;
 precedence nonassoc LE, LT, EQ;
@@ -80,129 +92,149 @@ precedence left ISVOID;
 precedence left NEG;
 precedence left AT;
 precedence left DOT;
-
+/*El programa base define class_list como Classes, por lo tanto ya que si da error
+no vamos a class_list, enviamos una nueva Classes en lugar de cl en el error*/
 program
-	::= listac:cl       {: RESULT = new programc(curr_lineno(), cl); :}
+	::= class_list:cl       {: RESULT = new programc(curr_lineno(), cl); :}
 	|error                   {: RESULT = new programc(curr_lineno(),
 	                          new Classes(curr_lineno())); :}
     ;
-
-listac
-	
+/*No se necesita modificar algo acá, todo esta bien */
+class_list
+	/* single class */
 	::= clase:c                 {: RESULT = (new Classes(curr_lineno())).appendElement(c); :}
-	
-	| listac:cl clase:c     {: RESULT = cl.appendElement(c); :}
+	/* several classes */
+	| class_list:cl clase:c     {: RESULT = cl.appendElement(c); :}
 	;
 
-
+/* If no parent is specified, the class inherits from the Object class */
 clase
-	::= CLASS TYPEID:n reduccion:f SEMI
+	::= CLASS TYPEID:n reduccion_dummy:f SEMI
 	                        {: RESULT = new class_c(curr_lineno(), n,
 		                    AbstractTable.idtable.addString("Object"), f, curr_filename()); :}
-	| CLASS TYPEID:n INHERITS TYPEID:p reduccion:f SEMI
+	| CLASS TYPEID:n INHERITS TYPEID:p reduccion_dummy:f SEMI
 	                        {: RESULT = new class_c(curr_lineno(),
 	                         n, p, f, curr_filename()); :}
 	;
-
-reduccion::=LBRACE RBRACE                 {: RESULT = new Features(curr_lineno()); :}
-    | LBRACE listacr:df RBRACE       {: RESULT = df; :}
+/*no terminal que evita conflictos con dommy, del mismo tipo seria*/
+reduccion_dummy::=LBRACE RBRACE                 {: RESULT = new Features(curr_lineno()); :}
+    | LBRACE dummy_feature_list:df RBRACE       {: RESULT = df; :}
 ;
-
-
-listacr
-	::= contenidoc:p                         {: RESULT = (new Features(curr_lineno())).appendElement(p); :}
-	| listacr:f contenidoc:p    {: RESULT = f.appendElement(p); :}
+/* Feature list may be empty, but no empty features in list. */
+/*Contenido de la clase seria Feature ya que los hijos de este serian metodos y atributos, necesitamos
+que se almacenen en su padre. Se agrega donde puede ir una vez, o tambien repetirse varias veces*/
+dummy_feature_list
+	::= contenido_clase:p                         {: RESULT = (new Features(curr_lineno())).appendElement(p); :}
+	| dummy_feature_list:f contenido_clase:p    {: RESULT = f.appendElement(p); :}
 	;
 
-
-contenidoc
-
+/*attr seria los atributos y method para los metodos, ambas de Feature*/
+contenido_clase
+/*atributos, requiere el object id, type id, pero tambien variando si se le asigna algo o no, donde no se crea algo que no es expresion
+ya que pues seria tipo nulo*/
 	::= OBJECTID:o COLON TYPEID:t SEMI                          {: RESULT = new attr(curr_lineno(), o, t, new no_expr(curr_lineno())); :}
 	| OBJECTID:o COLON TYPEID:t ASSIGN expresion:ex SEMI        {: RESULT = new attr(curr_lineno(), o, t, ex); :}
-	
+	/*metodos, requieren que objectid son, sus parametros, typeid y por ultimo el contenido de estos metodos*/
 	| OBJECTID:o LPAREN parametro:p RPAREN COLON TYPEID:t LBRACE expresion:ex RBRACE SEMI
             	                                                {: RESULT = new method(curr_lineno(), o, p, t, ex); :}
 	;
 
-
+/*Seria de tipo Formals ya que para method en cool-tree pide lineNumber, AbstractSymbol, Formals, AbstractSymbol, Expression*/
 parametro
-	::=                                         {: RESULT = new Formals(curr_lineno()); :}
-    | contenidodu:cp                                        {: RESULT = (new Formals(curr_lineno())).appendElement(cp); :}
-	| parametro:p COMMA contenidodu:cp                      {: RESULT = p.appendElement(cp); :}
+	::= /* Puede ir vacio */                                        {: RESULT = new Formals(curr_lineno()); :}
+    | contenido_parametro:cp                                        {: RESULT = (new Formals(curr_lineno())).appendElement(cp); :}
+	| parametro:p COMMA contenido_parametro:cp                      {: RESULT = p.appendElement(cp); :}
 	;
 
-
-contenidodu
+/*Quiero obtener un tipo Formals sin que sea este, por lo tanto, requiero de su hijo unico, formalc
+esto para evitar llenar el codigo de parametro y que esten las cosas ordenadas, dado que facilmente
+se pudo hacer en los mismos result de parametro*/
+contenido_parametro
 	::= OBJECTID:o COLON TYPEID:t                                   {: RESULT = new formalc(curr_lineno(), o, t); :}
 	;
-
+/*Para el contenido de metodo, expresion,  necesitamos saber que method en cool-tree pide lineNumber, AbstractSymbol, Formals, AbstractSymbol, Expression
+por lo tanto requerimos de que sea tipo Expression por compatibilidad donde establecemos estructura del manual en la pagina 16
+Figure 1: Cool Syntax, y viendo en cool_tre los hijos de Expresion que son assign, static_dispatch,dispatch,cond,loop,typcase,block,let,plus,sub,mul,divide,neg,
+lt,eq,leq,comp,int_const,bool_const,string_const,new_,isvoid,no_expr,object para saber que devolver.
+*/
 expresion
 	::= OBJECTID:o ASSIGN expresion:ex                                                  {: RESULT = new assign(curr_lineno(), o, ex); :}
-
-    | expresion:ex AT TYPEID:t DOT OBJECTID:o reduc:re                        {: RESULT = new static_dispatch(curr_lineno(), ex, t, o, re); :}
-    | expresion:ex DOT OBJECTID:o reduc:re                                    {: RESULT = new dispatch(curr_lineno(), ex, o, re); :}
-	
-	| OBJECTID:o reduc:re                                                     {: AbstractSymbol aS=AbstractTable.idtable.addString("self");
+    /*Para este que necesitamos una repitencia_expresion para evitar colocar muchas producciones, solo colocamos dos
+    producciones donde puede ir AT TYPEID y donde no, evitando asi tambien muchos no terminales*/
+    | expresion:ex AT TYPEID:t DOT OBJECTID:o reduce_expresion:re                        {: RESULT = new static_dispatch(curr_lineno(), ex, t, o, re); :}
+    | expresion:ex DOT OBJECTID:o reduce_expresion:re                                    {: RESULT = new dispatch(curr_lineno(), ex, o, re); :}
+	/*Asi como en la clase se agrega el Object en la tabla, aca hacemos algo parecido, se agrega pero self*/
+	| OBJECTID:o reduce_expresion:re                                                     {: AbstractSymbol aS=AbstractTable.idtable.addString("self");
 	                                                                                    RESULT = new dispatch(curr_lineno(),new object(curr_lineno(),aS),o,re); :}
-	
+	/*Condicional y ciclo*/
 	| IF expresion:ex THEN expresion:ex1 ELSE expresion:ex2 FI                          {: RESULT = new cond(curr_lineno(), ex, ex1, ex2); :}
 	| WHILE expresion:ex LOOP expresion:ex1 POOL                                        {: RESULT = new loop(curr_lineno(), ex, ex1); :}
-	
-	| LBRACE cubo:eb RBRACE                                                 {: RESULT = new block(curr_lineno(), eb); :}
-	
-	| LET contenidol:cl                                                              {: RESULT = cl; :}
-	
-	| CASE expresion:ex OF contenidocs:cc ESAC                                       {: RESULT = new typcase(curr_lineno(),ex,cc); :}
-
+	/*Nuevo bloque, solo que este es casi igual a expresion, puede confundir, sin embargo necesitamos otro no terminal, ya que puede venir una o muchas veces,
+	pero tambien por que lleva punto y coma al final por lo que no se puede usar repitencia_expresion*/
+	| LBRACE expresion_bloque:eb RBRACE                                                 {: RESULT = new block(curr_lineno(), eb); :}
+	/*Se crea un nuevo no terminal a partir de OBJECTID, dado que despues este nos permite repetir,	como si fuera un (ID:TYPE( <- expr )*)+
+	 donde los parentesis solo son de agrupacion, no irian, por lo tanto let y el no terminal, ademas se manda el final de esto para no andar jalando
+	 datos extra, por lo que solo se devuelve*/
+	| LET contenido_let:cl                                                              {: RESULT = cl; :}
+	/*Misma idea que con el let practicamente, la repitencia requiere un nuevo no terminal para evitar procedencias acumuladas
+	y tener un orden*/
+	| CASE expresion:ex OF contenido_case:cc ESAC                                       {: RESULT = new typcase(curr_lineno(),ex,cc); :}
+	 /*Nuevo TYPEID y tambien isvoid*/
 	| NEW TYPEID:t                                                                      {: RESULT = new new_(curr_lineno(), t); :}
 	| ISVOID expresion:ex                                                               {: RESULT = new isvoid(curr_lineno(), ex); :}
-	
+	/*Operaciones, con las precedencias establecidas se puede colocar sin preocuparse por la ambiguedad*/
 	| expresion:ex PLUS expresion:ex1                                                   {: RESULT = new plus(curr_lineno(), ex, ex1); :}
 	| expresion:ex MINUS expresion:ex1                                                  {: RESULT = new sub(curr_lineno(), ex, ex1); :}
 	| expresion:ex MULT expresion:ex1                                                   {: RESULT = new mul(curr_lineno(), ex, ex1); :}
 	| expresion:ex DIV expresion:ex1                                                    {: RESULT = new divide(curr_lineno(), ex, ex1); :}
 	| NEG expresion:ex                                                                  {: RESULT = new neg(curr_lineno(), ex); :}
-
+	/*Operadores donde se uso nonassoc*/
 	| expresion:ex LT expresion:ex1                                                     {: RESULT = new lt(curr_lineno(), ex, ex1); :}
 	| expresion:ex LE expresion:ex1                                                     {: RESULT = new leq(curr_lineno(), ex, ex1); :}
 	| expresion:ex EQ expresion:ex1                                                     {: RESULT = new eq(curr_lineno(), ex, ex1); :}
-	
+	/*negacion y expresion en parentesis*/
 	| NOT expresion:ex                                                                  {: RESULT = new comp(curr_lineno(), ex); :}
 	| LPAREN expresion:ex RPAREN                                                        {: RESULT = ex; :}
+    /*Tipos de datos*/
     | OBJECTID:o                                                                        {: RESULT = new object(curr_lineno(), o); :}
     | INT_CONST:ic                                                                      {: RESULT = new int_const(curr_lineno(), ic); :}
     | STR_CONST:sc                                                                      {: RESULT = new string_const(curr_lineno(), sc); :}
     | BOOL_CONST:bc                                                                     {: RESULT = new bool_const(curr_lineno(), bc); :}
 	;
-
-reduc
-
+/*Quitamos error de never reduce en repitencia expresion*/
+reduce_expresion
+/*Puede venir muchas veces, como tambien puede venir sin nada */
     ::= LPAREN RPAREN                                               {: RESULT = new Expressions(curr_lineno()); :}
-    | LPAREN repit:re RPAREN                         {: RESULT = re; :}
+    | LPAREN repitencia_expresion:re RPAREN                         {: RESULT = re; :}
     ;
-
-repit
-   
+/*Este seria de tipo Expressions, dado que para dispatch esto se solicita en parametros en cool-tree*/
+repitencia_expresion
+    /*Puede ir una o muchas veces*/
     ::= expresion:ex                                {: RESULT = (new Expressions(curr_lineno())).appendElement(ex); :}
-    | repit:rex COMMA expresion:ex   {: RESULT = rex.appendElement(ex); :}
+    | repitencia_expresion:rex COMMA expresion:ex   {: RESULT = rex.appendElement(ex); :}
     ;
 
-contenidocs
-    
+/*A diferencia del let, este no es una expresion, por lo que tiene su propio apartado en Cases, se puede usar sus hijos, pero para
+evitar pasar demasiado parametros, esta es la mejor opcion, ademas que para no escribir la primera parte podemos enviar en el typcase el Cases de acá*/
+contenido_case
+    /*Produccion con fin*/
     ::= OBJECTID:o COLON TYPEID:t DARROW expresion:ex SEMI                       {: RESULT = (new Cases(curr_lineno())).appendElement(new branch(curr_lineno(), o, t, ex)); :}
-    
-    | contenidocs:cc OBJECTID:o COLON TYPEID:t DARROW expresion:ex SEMI       {: RESULT = cc.appendElement(new branch(curr_lineno(), o, t, ex)); :}
+    /*Produccion con repitencia*/
+    | contenido_case:cc OBJECTID:o COLON TYPEID:t DARROW expresion:ex SEMI       {: RESULT = cc.appendElement(new branch(curr_lineno(), o, t, ex)); :}
     ;
-
-contenidol
-   
+/*Para el contenido de let, en generalizacion necesitariamos una Expression ya que let es un hijo de este, donde va vacio pues obviamente agregamos
+el parametro pero como no_expr pasandole curr_lineno*/
+contenido_let
+    /*Producciones donde podemos finalizar*/
     ::= OBJECTID:o COLON TYPEID:t IN expresion:ex                               {: RESULT = new let(curr_lineno(), o, t,new no_expr(curr_lineno()), ex); :}
     | OBJECTID:o COLON TYPEID:t ASSIGN expresion:ex IN expresion:ex1            {: RESULT = new let(curr_lineno(), o, t, ex, ex1); :}
-  
-    | OBJECTID:o COLON TYPEID:t COMMA contenidol:cl                          {: RESULT = new let(curr_lineno(), o, t, new no_expr(curr_lineno()), cl); :}
-    | OBJECTID:o COLON TYPEID:t ASSIGN expresion:ex COMMA contenidol:cl      {: RESULT = new let(curr_lineno(), o, t, ex, cl); :}
+    /*Producciones de repitencia*/
+    | OBJECTID:o COLON TYPEID:t COMMA contenido_let:cl                          {: RESULT = new let(curr_lineno(), o, t, new no_expr(curr_lineno()), cl); :}
+    | OBJECTID:o COLON TYPEID:t ASSIGN expresion:ex COMMA contenido_let:cl      {: RESULT = new let(curr_lineno(), o, t, ex, cl); :}
     ;
-cubo
+/*Seria lo mismo que repitencia_expresion, por lo tanto, devuelve Expressions, y cabe destacar que si entra acá,
+al menos una vez tiene que pasar*/
+expresion_bloque
     ::= expresion:ex SEMI                       {: RESULT = (new Expressions(curr_lineno())).appendElement(ex); :}
-    | cubo:eb expresion:ex SEMI     {: RESULT = eb.appendElement(ex); :}
+    | expresion_bloque:eb expresion:ex SEMI     {: RESULT = eb.appendElement(ex); :}
     ;
